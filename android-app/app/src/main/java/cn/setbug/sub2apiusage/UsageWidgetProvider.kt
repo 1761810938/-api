@@ -67,7 +67,8 @@ class UsageWidgetProvider : AppWidgetProvider() {
             val views = RemoteViews(context.packageName, R.layout.widget_usage)
             val options = appWidgetManager.getAppWidgetOptions(appWidgetId)
             val minWidth = options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, 0)
-            val compact = minWidth in 1..140
+            val minHeight = options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT, 0)
+            val compact = (minWidth in 1..120) || (minHeight in 1..110)
 
             val launchIntent = Intent(context, MainActivity::class.java)
             val launchPendingIntent = PendingIntent.getActivity(
