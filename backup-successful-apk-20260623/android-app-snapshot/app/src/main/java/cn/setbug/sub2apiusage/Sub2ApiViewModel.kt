@@ -114,11 +114,6 @@ data class UsageSnapshot(
     val standardCost: String,
     val totalActualCost: String,
     val averageDurationMs: String,
-    val averageTokensPerRequest: String,
-    val averageCostPerRequest: String,
-    val inputShare: String,
-    val outputShare: String,
-    val costGap: String,
     val updatedAtLabel: String,
 ) {
     companion object
@@ -212,27 +207,14 @@ object Sub2ApiClient {
         val statsPayload = getJson(statsUrl, mapOf("Authorization" to "Bearer $token"), "读取失败")
         val stats = unwrapApiResponse(statsPayload, "读取失败")
 
-        val requests = stats.optDouble("today_requests")
-        val totalTokens = stats.optDouble("today_tokens")
-        val inputTokens = stats.optDouble("today_input_tokens")
-        val outputTokens = stats.optDouble("today_output_tokens")
-        val standardCost = stats.optDouble("today_cost")
-        val actualCost = stats.optDouble("today_actual_cost")
-        val averageDurationMs = stats.optDouble("average_duration_ms")
-
         return UsageSnapshot(
-            totalRequests = formatNumber(requests),
-            totalTokens = formatNumber(totalTokens),
-            inputTokens = formatNumber(inputTokens),
-            outputTokens = formatNumber(outputTokens),
-            standardCost = formatCost(standardCost),
-            totalActualCost = formatCost(actualCost),
-            averageDurationMs = formatDuration(averageDurationMs),
-            averageTokensPerRequest = formatAverageTokens(safeDivide(totalTokens, requests)),
-            averageCostPerRequest = formatCost(safeDivide(actualCost, requests)),
-            inputShare = formatPercent(safeDivide(inputTokens, totalTokens)),
-            outputShare = formatPercent(safeDivide(outputTokens, totalTokens)),
-            costGap = formatSignedCost(actualCost - standardCost),
+            totalRequests = formatNumber(stats.optDouble("today_requests")),
+            totalTokens = formatNumber(stats.optDouble("today_tokens")),
+            inputTokens = formatNumber(stats.optDouble("today_input_tokens")),
+            outputTokens = formatNumber(stats.optDouble("today_output_tokens")),
+            standardCost = formatCost(stats.optDouble("today_cost")),
+            totalActualCost = formatCost(stats.optDouble("today_actual_cost")),
+            averageDurationMs = formatDuration(stats.optDouble("average_duration_ms")),
             updatedAtLabel = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(Date()),
         )
     }
@@ -296,12 +278,6 @@ object Sub2ApiClient {
         return url.trimEnd('/')
     }
 
-    private fun safeDivide(numerator: Double, denominator: Double): Double {
-        val top = if (numerator.isFinite()) numerator else 0.0
-        val bottom = if (denominator.isFinite()) denominator else 0.0
-        return if (bottom == 0.0) 0.0 else top / bottom
-    }
-
     private fun formatNumber(value: Double): String {
         val number = if (value.isFinite()) value else 0.0
         val absolute = kotlin.math.abs(number)
@@ -313,28 +289,11 @@ object Sub2ApiClient {
         }
     }
 
-    private fun formatAverageTokens(value: Double): String {
-        val number = if (value.isFinite()) value else 0.0
-        return if (kotlin.math.abs(number) >= 1000) formatNumber(number) else trimTrailingZeros(number, 1)
-    }
-
     private fun formatCost(value: Double): String {
         val number = if (value.isFinite()) value else 0.0
         return if (number == 0.0) "$0.00"
         else if (kotlin.math.abs(number) < 1) "$${trimTrailingZeros(number, 6)}"
         else "$${trimTrailingZeros(number, 4)}"
-    }
-
-    private fun formatSignedCost(value: Double): String {
-        val number = if (value.isFinite()) value else 0.0
-        if (number == 0.0) return "$0.00"
-        val prefix = if (number > 0) "+" else "-"
-        return "$prefix${formatCost(kotlin.math.abs(number))}"
-    }
-
-    private fun formatPercent(value: Double): String {
-        val number = if (value.isFinite()) value else 0.0
-        return "${trimTrailingZeros(number * 100, 1)}%"
     }
 
     private fun formatDuration(value: Double): String {

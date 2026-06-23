@@ -66,27 +66,47 @@ class UsageWidgetProvider : AppWidgetProvider() {
             if (site == null) {
                 views.setTextViewText(R.id.widgetTitle, "Sub2API 用量")
                 views.setTextViewText(R.id.widgetSubtitle, "先在 App 里添加站点")
+                views.setTextViewText(R.id.widgetBadge, "SETUP")
                 views.setTextViewText(R.id.widgetPrimary, "未配置")
                 views.setTextViewText(R.id.widgetSecondary, "添加小组件后选择站点")
-                views.setTextViewText(R.id.widgetFooter, "点此打开 App")
+                views.setTextViewText(R.id.widgetMetricLabelLeft, "站点")
+                views.setTextViewText(R.id.widgetMetricValueLeft, "未绑定")
+                views.setTextViewText(R.id.widgetMetricLabelRight, "状态")
+                views.setTextViewText(R.id.widgetMetricValueRight, "等待设置")
+                views.setTextViewText(R.id.widgetFooter, "点这里打开 App")
                 views.setOnClickPendingIntent(R.id.widgetRoot, launchPendingIntent)
             } else {
                 views.setTextViewText(R.id.widgetTitle, site.name.ifBlank { site.baseUrl })
                 views.setTextViewText(R.id.widgetSubtitle, site.email)
                 when {
                     snapshot != null -> {
+                        views.setTextViewText(R.id.widgetBadge, "LIVE")
                         views.setTextViewText(R.id.widgetPrimary, "${snapshot.totalRequests} 请求")
-                        views.setTextViewText(R.id.widgetSecondary, "${snapshot.totalTokens} Tokens · ${snapshot.totalActualCost}")
+                        views.setTextViewText(R.id.widgetSecondary, "${snapshot.totalActualCost} · 平均 ${snapshot.averageCostPerRequest}/次")
+                        views.setTextViewText(R.id.widgetMetricLabelLeft, "总 Token")
+                        views.setTextViewText(R.id.widgetMetricValueLeft, snapshot.totalTokens)
+                        views.setTextViewText(R.id.widgetMetricLabelRight, "平均耗时")
+                        views.setTextViewText(R.id.widgetMetricValueRight, snapshot.averageDurationMs)
                         views.setTextViewText(R.id.widgetFooter, "更新：${snapshot.updatedAtLabel}")
                     }
                     !error.isNullOrBlank() -> {
+                        views.setTextViewText(R.id.widgetBadge, "ERROR")
                         views.setTextViewText(R.id.widgetPrimary, "查询失败")
                         views.setTextViewText(R.id.widgetSecondary, error.take(48))
-                        views.setTextViewText(R.id.widgetFooter, "点按重试")
+                        views.setTextViewText(R.id.widgetMetricLabelLeft, "站点")
+                        views.setTextViewText(R.id.widgetMetricValueLeft, site.name.ifBlank { "已绑定" })
+                        views.setTextViewText(R.id.widgetMetricLabelRight, "操作")
+                        views.setTextViewText(R.id.widgetMetricValueRight, "点按重试")
+                        views.setTextViewText(R.id.widgetFooter, "点这里打开 App")
                     }
                     else -> {
+                        views.setTextViewText(R.id.widgetBadge, "READY")
                         views.setTextViewText(R.id.widgetPrimary, "等待查询")
                         views.setTextViewText(R.id.widgetSecondary, "添加后会自动刷新")
+                        views.setTextViewText(R.id.widgetMetricLabelLeft, "总 Token")
+                        views.setTextViewText(R.id.widgetMetricValueLeft, "--")
+                        views.setTextViewText(R.id.widgetMetricLabelRight, "平均耗时")
+                        views.setTextViewText(R.id.widgetMetricValueRight, "--")
                         views.setTextViewText(R.id.widgetFooter, "点按立即刷新")
                     }
                 }

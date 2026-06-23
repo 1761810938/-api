@@ -1,0 +1,14 @@
+成功版本恢复说明
+
+本目录保存的是“已经成功打包并安装到手机”的稳定版本快照信息。
+
+推荐回退方式：
+1. 打开 GitHub 仓库：https://github.com/1761810938/-api.git
+2. 回退到成功提交：7dbda17
+3. 或在本地执行：
+   git checkout 7dbda17
+
+说明：
+- `android-app-snapshot/` 保存了当前稳定版的核心安卓源码快照
+- `github-workflow/android-apk.yml` 保存了成功出包的 GitHub Actions 工作流
+- `PROJECT_LOG.md` 记录了本项目从 Egern 到 Android App 的关键过程

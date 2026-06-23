@@ -57,6 +57,11 @@ fun UsageSnapshot.toJson(): JSONObject {
         put("standardCost", standardCost)
         put("totalActualCost", totalActualCost)
         put("averageDurationMs", averageDurationMs)
+        put("averageTokensPerRequest", averageTokensPerRequest)
+        put("averageCostPerRequest", averageCostPerRequest)
+        put("inputShare", inputShare)
+        put("outputShare", outputShare)
+        put("costGap", costGap)
         put("updatedAtLabel", updatedAtLabel)
     }
 }
@@ -70,6 +75,11 @@ fun UsageSnapshot.Companion.fromJson(json: JSONObject): UsageSnapshot {
         standardCost = json.optString("standardCost"),
         totalActualCost = json.optString("totalActualCost"),
         averageDurationMs = json.optString("averageDurationMs"),
+        averageTokensPerRequest = json.optString("averageTokensPerRequest"),
+        averageCostPerRequest = json.optString("averageCostPerRequest"),
+        inputShare = json.optString("inputShare"),
+        outputShare = json.optString("outputShare"),
+        costGap = json.optString("costGap"),
         updatedAtLabel = json.optString("updatedAtLabel"),
     )
 }
