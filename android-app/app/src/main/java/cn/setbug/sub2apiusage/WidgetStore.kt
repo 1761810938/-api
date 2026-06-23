@@ -17,6 +17,14 @@ object WidgetStore {
         return prefs(context).getString(KEY_SITE_PREFIX + appWidgetId, null)
     }
 
+    fun ensureWidgetSite(context: Context, appWidgetId: Int): String? {
+        val existing = loadWidgetSite(context, appWidgetId)
+        if (!existing.isNullOrBlank()) return existing
+        val firstSiteId = siteRepository(context).loadSites().firstOrNull()?.id ?: return null
+        saveWidgetSite(context, appWidgetId, firstSiteId)
+        return firstSiteId
+    }
+
     fun removeWidget(context: Context, appWidgetId: Int) {
         prefs(context).edit()
             .remove(KEY_SITE_PREFIX + appWidgetId)

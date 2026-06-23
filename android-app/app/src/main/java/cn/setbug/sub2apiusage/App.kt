@@ -1,6 +1,7 @@
 package cn.setbug.sub2apiusage
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -19,6 +20,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.ExpandLess
+import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -70,6 +73,7 @@ fun Sub2ApiUsageApp(viewModel: Sub2ApiViewModel = rememberSub2ApiViewModel()) {
     val context = LocalContext.current.applicationContext
     val snackbarHostState = remember { SnackbarHostState() }
     var editingSiteId by rememberSaveable { mutableStateOf<String?>(null) }
+    var expandedSiteId by rememberSaveable { mutableStateOf<String?>(null) }
     var showEditor by rememberSaveable { mutableStateOf(false) }
     val editingSite = state.sites.firstOrNull { it.id == editingSiteId }
 
@@ -120,10 +124,15 @@ fun Sub2ApiUsageApp(viewModel: Sub2ApiViewModel = rememberSub2ApiViewModel()) {
                     itemsIndexed(state.sites, key = { _, site -> site.id }) { _, site ->
                         val loading = state.loadingSiteId == site.id
                         val usage = state.usageBySiteId[site.id]
+                        val expanded = expandedSiteId == site.id
                         SiteCard(
                             site = site,
                             usage = usage,
                             loading = loading,
+                            expanded = expanded,
+                            onToggleExpand = {
+                                expandedSiteId = if (expanded) null else site.id
+                            },
                             onRefresh = {
                                 viewModel.refreshSite(site.id)
                                 UsageWidgetProvider.refreshAll(context)
@@ -133,6 +142,7 @@ fun Sub2ApiUsageApp(viewModel: Sub2ApiViewModel = rememberSub2ApiViewModel()) {
                                 showEditor = true
                             },
                             onDelete = {
+                                if (expandedSiteId == site.id) expandedSiteId = null
                                 viewModel.deleteSite(site.id)
                                 UsageWidgetProvider.refreshAll(context)
                             }
@@ -211,6 +221,8 @@ private fun SiteCard(
     site: Sub2ApiSite,
     usage: UsageSnapshot?,
     loading: Boolean,
+    expanded: Boolean,
+    onToggleExpand: () -> Unit,
     onRefresh: () -> Unit,
     onEdit: () -> Unit,
     onDelete: () -> Unit,
@@ -220,7 +232,12 @@ private fun SiteCard(
         colors = CardDefaults.cardColors(containerColor = CardBackground)
     ) {
         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable(onClick = onToggleExpand)
+            ) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(site.name.ifBlank { site.baseUrl }, fontWeight = FontWeight.Bold, color = PrimaryText)
                     Spacer(Modifier.height(4.dp))
@@ -228,42 +245,58 @@ private fun SiteCard(
                     Spacer(Modifier.height(2.dp))
                     Text(site.email, color = Color(0xFF94A3B8), style = MaterialTheme.typography.bodySmall)
                 }
-                IconButton(onClick = onRefresh) {
-                    Icon(Icons.Default.Refresh, contentDescription = "刷新", tint = AccentBlue)
+                if (usage != null) {
+                    Text(usage.totalActualCost, color = AccentBlue, fontWeight = FontWeight.SemiBold)
+                    Spacer(Modifier.width(10.dp))
                 }
-                IconButton(onClick = onDelete) {
-                    Icon(Icons.Default.Delete, contentDescription = "删除", tint = Color(0xFFDC2626))
-                }
+                Icon(
+                    imageVector = if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                    contentDescription = if (expanded) "收起" else "展开",
+                    tint = SecondaryText
+                )
             }
 
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                TextButton(onClick = onEdit) { Text("编辑") }
-                TextButton(onClick = onRefresh) { Text("查询") }
-            }
+            if (expanded) {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    TextButton(onClick = onEdit) { Text("编辑") }
+                    TextButton(onClick = onRefresh) { Text("查询") }
+                    TextButton(onClick = onDelete) { Text("删除") }
+                }
 
-            when {
-                loading -> {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(10.dp),
-                        modifier = Modifier.padding(vertical = 8.dp)
-                    ) {
-                        CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
-                        Text("正在读取今日用量…", color = SecondaryText)
+                when {
+                    loading -> {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(10.dp),
+                            modifier = Modifier.padding(vertical = 8.dp)
+                        ) {
+                            CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+                            Text("正在读取今日用量…", color = SecondaryText)
+                        }
+                    }
+                    usage != null -> {
+                        HeroMetrics(usage)
+                        DetailMetrics(usage)
+                        Text(
+                            text = "更新时间：${usage.updatedAtLabel}",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = SecondaryText
+                        )
+                    }
+                    else -> {
+                        Text("还没有查询数据，点“查询”开始。", color = SecondaryText)
                     }
                 }
-                usage != null -> {
-                    HeroMetrics(usage)
-                    DetailMetrics(usage)
-                    Text(
-                        text = "更新时间：${usage.updatedAtLabel}",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = SecondaryText
-                    )
-                }
-                else -> {
-                    Text("还没有查询数据，点“查询”开始。", color = SecondaryText)
-                }
+            } else {
+                Text(
+                    text = when {
+                        loading -> "正在读取今日用量…"
+                        usage != null -> "${usage.totalRequests} 请求 · ${usage.totalTokens} Token · ${usage.totalActualCost}"
+                        else -> "点一下展开，查询这个站点的今日数据"
+                    },
+                    color = SecondaryText,
+                    style = MaterialTheme.typography.bodySmall
+                )
             }
         }
     }

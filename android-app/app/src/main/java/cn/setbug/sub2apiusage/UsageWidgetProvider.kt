@@ -6,6 +6,7 @@ import android.appwidget.AppWidgetProvider
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.os.Bundle
 import android.widget.RemoteViews
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -20,6 +21,16 @@ class UsageWidgetProvider : AppWidgetProvider() {
             updateWidget(context, appWidgetManager, appWidgetId)
             refreshWidget(context, appWidgetManager, appWidgetId)
         }
+    }
+
+    override fun onAppWidgetOptionsChanged(
+        context: Context,
+        appWidgetManager: AppWidgetManager,
+        appWidgetId: Int,
+        newOptions: Bundle,
+    ) {
+        super.onAppWidgetOptionsChanged(context, appWidgetManager, appWidgetId, newOptions)
+        updateWidget(context, appWidgetManager, appWidgetId)
     }
 
     override fun onDeleted(context: Context, appWidgetIds: IntArray) {
@@ -49,11 +60,14 @@ class UsageWidgetProvider : AppWidgetProvider() {
 
         fun updateWidget(context: Context, appWidgetManager: AppWidgetManager, appWidgetId: Int) {
             val repository = siteRepository(context)
-            val siteId = WidgetStore.loadWidgetSite(context, appWidgetId)
+            val siteId = WidgetStore.ensureWidgetSite(context, appWidgetId)
             val site = repository.loadSites().firstOrNull { it.id == siteId }
             val snapshot = WidgetStore.loadSnapshot(context, appWidgetId)
             val error = WidgetStore.loadError(context, appWidgetId)
             val views = RemoteViews(context.packageName, R.layout.widget_usage)
+            val options = appWidgetManager.getAppWidgetOptions(appWidgetId)
+            val minWidth = options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, 0)
+            val compact = minWidth in 1..140
 
             val launchIntent = Intent(context, MainActivity::class.java)
             val launchPendingIntent = PendingIntent.getActivity(
@@ -68,12 +82,15 @@ class UsageWidgetProvider : AppWidgetProvider() {
                 views.setTextViewText(R.id.widgetSubtitle, "先在 App 里添加站点")
                 views.setTextViewText(R.id.widgetBadge, "SETUP")
                 views.setTextViewText(R.id.widgetPrimary, "未配置")
-                views.setTextViewText(R.id.widgetSecondary, "添加小组件后选择站点")
+                views.setTextViewText(R.id.widgetSecondary, "请先在 App 内添加至少一个站点")
                 views.setTextViewText(R.id.widgetMetricLabelLeft, "站点")
                 views.setTextViewText(R.id.widgetMetricValueLeft, "未绑定")
                 views.setTextViewText(R.id.widgetMetricLabelRight, "状态")
                 views.setTextViewText(R.id.widgetMetricValueRight, "等待设置")
                 views.setTextViewText(R.id.widgetFooter, "点这里打开 App")
+                views.setViewVisibility(R.id.widgetSubtitle, android.view.View.VISIBLE)
+                views.setViewVisibility(R.id.widgetSecondary, android.view.View.VISIBLE)
+                views.setViewVisibility(R.id.widgetMetricsRow, android.view.View.VISIBLE)
                 views.setOnClickPendingIntent(R.id.widgetRoot, launchPendingIntent)
             } else {
                 views.setTextViewText(R.id.widgetTitle, site.name.ifBlank { site.baseUrl })
@@ -81,13 +98,13 @@ class UsageWidgetProvider : AppWidgetProvider() {
                 when {
                     snapshot != null -> {
                         views.setTextViewText(R.id.widgetBadge, "LIVE")
-                        views.setTextViewText(R.id.widgetPrimary, "${snapshot.totalRequests} 请求")
-                        views.setTextViewText(R.id.widgetSecondary, "${snapshot.totalActualCost} · 平均 ${snapshot.averageCostPerRequest}/次")
+                        views.setTextViewText(R.id.widgetPrimary, if (compact) snapshot.totalRequests else "${snapshot.totalRequests} 请求")
+                        views.setTextViewText(R.id.widgetSecondary, if (compact) snapshot.totalActualCost else "${snapshot.totalActualCost} · 平均 ${snapshot.averageCostPerRequest}/次")
                         views.setTextViewText(R.id.widgetMetricLabelLeft, "总 Token")
                         views.setTextViewText(R.id.widgetMetricValueLeft, snapshot.totalTokens)
                         views.setTextViewText(R.id.widgetMetricLabelRight, "平均耗时")
                         views.setTextViewText(R.id.widgetMetricValueRight, snapshot.averageDurationMs)
-                        views.setTextViewText(R.id.widgetFooter, "更新：${snapshot.updatedAtLabel}")
+                        views.setTextViewText(R.id.widgetFooter, if (compact) "${snapshot.updatedAtLabel}" else "更新：${snapshot.updatedAtLabel}")
                     }
                     !error.isNullOrBlank() -> {
                         views.setTextViewText(R.id.widgetBadge, "ERROR")
@@ -111,6 +128,10 @@ class UsageWidgetProvider : AppWidgetProvider() {
                     }
                 }
 
+                views.setViewVisibility(R.id.widgetSubtitle, if (compact) android.view.View.GONE else android.view.View.VISIBLE)
+                views.setViewVisibility(R.id.widgetSecondary, if (compact) android.view.View.GONE else android.view.View.VISIBLE)
+                views.setViewVisibility(R.id.widgetMetricsRow, if (compact) android.view.View.GONE else android.view.View.VISIBLE)
+
                 val refreshIntent = Intent(context, UsageWidgetProvider::class.java).apply {
                     action = ACTION_REFRESH_WIDGET
                     putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId)
@@ -130,7 +151,7 @@ class UsageWidgetProvider : AppWidgetProvider() {
 
         fun refreshWidget(context: Context, appWidgetManager: AppWidgetManager, appWidgetId: Int) {
             val repository = siteRepository(context)
-            val siteId = WidgetStore.loadWidgetSite(context, appWidgetId)
+            val siteId = WidgetStore.ensureWidgetSite(context, appWidgetId)
             val site = repository.loadSites().firstOrNull { it.id == siteId } ?: return
             CoroutineScope(Dispatchers.IO).launch {
                 runCatching { Sub2ApiClient.fetchTodayUsage(site) }
