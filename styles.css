@@ -1,0 +1,276 @@
+:root {
+  color-scheme: light dark;
+  --bg: #eaf8f5;
+  --panel: rgba(255, 255, 255, 0.92);
+  --panel-border: rgba(148, 163, 184, 0.18);
+  --text: #121827;
+  --muted: #667085;
+  --blue: #2f6fcb;
+  --blue-bg: #e4f0ff;
+  --amber: #d28a1a;
+  --amber-bg: #fff4cd;
+  --green: #23a45d;
+  --green-bg: #ddf8e7;
+  --purple: #8d39d5;
+  --purple-bg: #f1e3fa;
+  --warning: #b45309;
+  --danger: #b91c1c;
+  --success: #166534;
+  --loading: #1d4ed8;
+  --shadow: 0 18px 45px rgba(15, 23, 42, 0.08);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #101b1f;
+    --panel: rgba(27, 37, 43, 0.95);
+    --panel-border: rgba(148, 163, 184, 0.14);
+    --text: #f5f7fa;
+    --muted: #a1aab7;
+    --blue: #83b7ff;
+    --blue-bg: #21344b;
+    --amber: #ffd37c;
+    --amber-bg: #4a3920;
+    --green: #6ee7a0;
+    --green-bg: #1d4430;
+    --purple: #d7a8ff;
+    --purple-bg: #3e2d4c;
+    --warning: #fbbf24;
+    --danger: #fca5a5;
+    --success: #86efac;
+    --loading: #93c5fd;
+    --shadow: none;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  min-height: 100%;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: linear-gradient(180deg, var(--bg) 0%, color-mix(in srgb, var(--bg) 70%, #ffffff 30%) 100%);
+  color: var(--text);
+}
+
+body {
+  padding: max(18px, env(safe-area-inset-top)) 16px max(24px, env(safe-area-inset-bottom));
+}
+
+button,
+input {
+  font: inherit;
+}
+
+button {
+  border: 0;
+  cursor: pointer;
+}
+
+input {
+  width: 100%;
+  border: 1px solid var(--panel-border);
+  border-radius: 14px;
+  padding: 14px 16px;
+  background: rgba(255, 255, 255, 0.55);
+  color: var(--text);
+}
+
+@media (prefers-color-scheme: dark) {
+  input {
+    background: rgba(15, 23, 42, 0.45);
+  }
+}
+
+.app-shell {
+  width: min(920px, 100%);
+  margin: 0 auto;
+  display: grid;
+  gap: 16px;
+}
+
+.panel,
+.hero-card,
+.metric-card {
+  border: 1px solid var(--panel-border);
+  border-radius: 24px;
+  background: var(--panel);
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(18px);
+}
+
+.hero-card,
+.panel {
+  padding: 18px;
+}
+
+.hero-card {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
+.hero-card h1 {
+  margin: 6px 0 8px;
+  font-size: clamp(1.7rem, 3vw, 2.3rem);
+}
+
+.eyebrow {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.9rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.hero-copy,
+.hint,
+.status-detail,
+.metric-subtitle {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.config-form {
+  display: grid;
+  gap: 14px;
+}
+
+.field-grid {
+  display: grid;
+  gap: 12px;
+}
+
+.field {
+  display: grid;
+  gap: 8px;
+}
+
+.field span,
+.metric-label,
+.status-title {
+  font-weight: 600;
+}
+
+.action-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.primary-button,
+.secondary-button,
+.ghost-button {
+  padding: 12px 16px;
+  border-radius: 14px;
+}
+
+.primary-button {
+  background: var(--text);
+  color: var(--bg);
+}
+
+.secondary-button {
+  background: rgba(148, 163, 184, 0.16);
+  color: var(--text);
+}
+
+.ghost-button {
+  background: transparent;
+  color: var(--text);
+  border: 1px solid var(--panel-border);
+}
+
+.status-card[data-tone='idle'] .status-title {
+  color: var(--text);
+}
+
+.status-card[data-tone='loading'] .status-title {
+  color: var(--loading);
+}
+
+.status-card[data-tone='success'] .status-title {
+  color: var(--success);
+}
+
+.status-card[data-tone='warning'] .status-title {
+  color: var(--warning);
+}
+
+.status-card[data-tone='danger'] .status-title {
+  color: var(--danger);
+}
+
+.metrics-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.metric-card {
+  padding: 18px;
+}
+
+.metric-value {
+  margin: 10px 0 8px;
+  font-size: clamp(1.6rem, 4vw, 2.2rem);
+  font-weight: 800;
+  line-height: 1.1;
+}
+
+.tone-blue .metric-value {
+  color: var(--blue);
+}
+
+.tone-amber .metric-value {
+  color: var(--amber);
+}
+
+.tone-green .metric-value {
+  color: var(--green);
+}
+
+.tone-purple .metric-value {
+  color: var(--purple);
+}
+
+.tone-blue {
+  background: linear-gradient(180deg, var(--panel) 0%, color-mix(in srgb, var(--blue-bg) 42%, var(--panel) 58%) 100%);
+}
+
+.tone-amber {
+  background: linear-gradient(180deg, var(--panel) 0%, color-mix(in srgb, var(--amber-bg) 42%, var(--panel) 58%) 100%);
+}
+
+.tone-green {
+  background: linear-gradient(180deg, var(--panel) 0%, color-mix(in srgb, var(--green-bg) 42%, var(--panel) 58%) 100%);
+}
+
+.tone-purple {
+  background: linear-gradient(180deg, var(--panel) 0%, color-mix(in srgb, var(--purple-bg) 42%, var(--panel) 58%) 100%);
+}
+
+.hidden {
+  display: none !important;
+}
+
+@media (min-width: 760px) {
+  .field-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (max-width: 640px) {
+  .hero-card {
+    flex-direction: column;
+  }
+
+  .action-row > * {
+    flex: 1 1 100%;
+  }
+}

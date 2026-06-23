@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#0f172a" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Sub2API 用量" />
+    <title>Sub2API 今日用量</title>
+    <link rel="manifest" href="./manifest.webmanifest" />
+    <link rel="icon" href="./icon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main class="app-shell">
+      <header class="hero-card">
+        <div>
+          <p class="eyebrow">PWA 版</p>
+          <h1>Sub2API 今日用量</h1>
+          <p class="hero-copy">适合安卓手机添加到主屏幕后快速查看，不再依赖 Egern。</p>
+        </div>
+        <button id="installButton" class="ghost-button hidden" type="button">安装到主屏幕</button>
+      </header>
+
+      <section class="panel">
+        <form id="configForm" class="config-form">
+          <div class="field-grid">
+            <label class="field">
+              <span>网站 URL</span>
+              <input id="baseUrl" name="baseUrl" type="url" placeholder="https://example.com" autocomplete="url" required />
+            </label>
+            <label class="field">
+              <span>登录账号</span>
+              <input id="email" name="email" type="email" placeholder="name@example.com" autocomplete="username" required />
+            </label>
+            <label class="field">
+              <span>登录密码</span>
+              <input id="password" name="password" type="password" placeholder="请输入密码" autocomplete="current-password" required />
+            </label>
+          </div>
+
+          <div class="action-row">
+            <button id="saveAndLoadButton" class="primary-button" type="submit">保存并刷新</button>
+            <button id="refreshButton" class="secondary-button" type="button">仅刷新数据</button>
+            <button id="clearButton" class="ghost-button" type="button">清空本地配置</button>
+          </div>
+        </form>
+
+        <p class="hint">账号信息保存在当前浏览器的本地存储中，仅用于向你的 Sub2API 站点登录。若页面提示网络或 CORS 错误，请把此页面部署到同域名，或为 API 开启跨域访问。</p>
+      </section>
+
+      <section id="statusCard" class="panel status-card" aria-live="polite">
+        <p id="statusTitle" class="status-title">等待加载</p>
+        <p id="statusDetail" class="status-detail">填写配置后点击“保存并刷新”。</p>
+      </section>
+
+      <section id="metricsGrid" class="metrics-grid hidden" aria-live="polite"></section>
+    </main>
+
+    <script type="module" src="./app.js"></script>
+  </body>
+</html>

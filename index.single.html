@@ -1,0 +1,590 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Sub2API 今日用量 - 单文件版</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+        --bg: #eaf8f5;
+        --panel: rgba(255, 255, 255, 0.94);
+        --border: rgba(148, 163, 184, 0.2);
+        --text: #121827;
+        --muted: #667085;
+        --blue: #2f6fcb;
+        --amber: #d28a1a;
+        --green: #23a45d;
+        --purple: #8d39d5;
+        --warning: #b45309;
+        --danger: #b91c1c;
+        --success: #166534;
+        --shadow: 0 18px 42px rgba(15, 23, 42, 0.08);
+      }
+
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg: #101b1f;
+          --panel: rgba(27, 37, 43, 0.96);
+          --border: rgba(148, 163, 184, 0.14);
+          --text: #f5f7fa;
+          --muted: #a1aab7;
+          --blue: #83b7ff;
+          --amber: #ffd37c;
+          --green: #6ee7a0;
+          --purple: #d7a8ff;
+          --warning: #fbbf24;
+          --danger: #fca5a5;
+          --success: #86efac;
+          --shadow: none;
+        }
+      }
+
+      * { box-sizing: border-box; }
+      html, body {
+        margin: 0;
+        min-height: 100%;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        background: linear-gradient(180deg, var(--bg) 0%, color-mix(in srgb, var(--bg) 75%, #ffffff 25%) 100%);
+        color: var(--text);
+      }
+      body {
+        padding: max(16px, env(safe-area-inset-top)) 14px max(20px, env(safe-area-inset-bottom));
+      }
+      button, input { font: inherit; }
+      button { cursor: pointer; border: 0; }
+      input {
+        width: 100%;
+        padding: 14px 15px;
+        border-radius: 14px;
+        border: 1px solid var(--border);
+        background: rgba(255, 255, 255, 0.55);
+        color: var(--text);
+      }
+      @media (prefers-color-scheme: dark) {
+        input { background: rgba(15, 23, 42, 0.42); }
+      }
+      .app {
+        width: min(920px, 100%);
+        margin: 0 auto;
+        display: grid;
+        gap: 14px;
+      }
+      .card {
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: 22px;
+        box-shadow: var(--shadow);
+        padding: 16px;
+        backdrop-filter: blur(16px);
+      }
+      .hero h1 {
+        margin: 6px 0 8px;
+        font-size: clamp(1.55rem, 4vw, 2.1rem);
+      }
+      .eyebrow, .hint, .status-detail, .metric-subtitle {
+        margin: 0;
+        color: var(--muted);
+        line-height: 1.5;
+      }
+      .eyebrow {
+        font-size: 0.88rem;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+      }
+      .form {
+        display: grid;
+        gap: 12px;
+      }
+      .field-grid {
+        display: grid;
+        gap: 10px;
+      }
+      .field {
+        display: grid;
+        gap: 7px;
+      }
+      .field span, .metric-label, .status-title {
+        font-weight: 600;
+      }
+      .actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+      }
+      .primary, .secondary, .ghost {
+        padding: 12px 16px;
+        border-radius: 14px;
+      }
+      .primary {
+        background: var(--text);
+        color: var(--bg);
+      }
+      .secondary {
+        background: rgba(148, 163, 184, 0.16);
+        color: var(--text);
+      }
+      .ghost {
+        background: transparent;
+        color: var(--text);
+        border: 1px solid var(--border);
+      }
+      .status[data-tone='success'] .status-title { color: var(--success); }
+      .status[data-tone='warning'] .status-title { color: var(--warning); }
+      .status[data-tone='danger'] .status-title { color: var(--danger); }
+      .metrics {
+        display: grid;
+        gap: 12px;
+        grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+      }
+      .metric {
+        padding: 16px;
+        border-radius: 20px;
+        border: 1px solid var(--border);
+        background: rgba(255, 255, 255, 0.06);
+      }
+      .metric-value {
+        margin: 10px 0 8px;
+        font-size: clamp(1.5rem, 4vw, 2rem);
+        font-weight: 800;
+        line-height: 1.1;
+      }
+      .metric.blue .metric-value { color: var(--blue); }
+      .metric.amber .metric-value { color: var(--amber); }
+      .metric.green .metric-value { color: var(--green); }
+      .metric.purple .metric-value { color: var(--purple); }
+      .hidden { display: none !important; }
+      @media (min-width: 760px) {
+        .field-grid { grid-template-columns: repeat(3, 1fr); }
+      }
+      @media (max-width: 640px) {
+        .actions > * { flex: 1 1 100%; }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="app">
+      <section class="card hero">
+        <p class="eyebrow">单文件网页版</p>
+        <h1>Sub2API 今日用量</h1>
+        <p class="hint">这个版本只有一个 HTML 文件，适合你后面单独拿去部署。用 Edge 打开后，也可以自己添加到主屏幕。</p>
+      </section>
+
+      <section class="card">
+        <form id="configForm" class="form">
+          <div class="field-grid">
+            <label class="field">
+              <span>网站 URL</span>
+              <input id="baseUrl" type="url" placeholder="https://example.com" autocomplete="url" required />
+            </label>
+            <label class="field">
+              <span>登录账号</span>
+              <input id="email" type="email" placeholder="name@example.com" autocomplete="username" required />
+            </label>
+            <label class="field">
+              <span>登录密码</span>
+              <input id="password" type="password" placeholder="请输入密码" autocomplete="current-password" required />
+            </label>
+          </div>
+
+          <div class="actions">
+            <button class="primary" type="submit">保存并查询</button>
+            <button id="refreshButton" class="secondary" type="button">仅刷新</button>
+            <button id="clearButton" class="ghost" type="button">清空本地配置</button>
+          </div>
+        </form>
+
+        <p class="hint">账号信息保存在当前浏览器的本地存储中，仅用于向你的 Sub2API 站点登录。如果浏览器提示网络或跨域错误，通常是目标站点未开启 CORS，或页面和 API 不在同域。</p>
+      </section>
+
+      <section id="statusCard" class="card status" data-tone="idle">
+        <p id="statusTitle" class="status-title">等待查询</p>
+        <p id="statusDetail" class="status-detail">填写站点、账号和密码后点击“保存并查询”。</p>
+      </section>
+
+      <section id="metricsGrid" class="metrics hidden"></section>
+    </main>
+
+    <script>
+      const STORAGE_KEY = 'sub2api-usage-single-file-config';
+      const REFRESH_INTERVAL_MS = 10 * 60 * 1000;
+      const METRICS = [
+        {
+          label: '总请求数',
+          tone: 'blue',
+          value: (usage) => formatNumber(usage.totalRequests, { compact: false }),
+          subtitle: () => '今日范围内',
+        },
+        {
+          label: '总 Token',
+          tone: 'amber',
+          value: (usage) => formatNumber(usage.totalTokens),
+          subtitle: (usage) => `输入: ${formatNumber(usage.inputTokens)} / 输出: ${formatNumber(usage.outputTokens)}`,
+        },
+        {
+          label: '总消费',
+          tone: 'green',
+          value: (usage) => formatCost(usage.totalActualCost),
+          subtitle: (usage) => `实际 / ${formatCost(usage.standardCost)} 标准`,
+        },
+        {
+          label: '平均耗时',
+          tone: 'purple',
+          value: (usage) => formatDuration(usage.averageDurationMs),
+          subtitle: () => '每次请求',
+        },
+      ];
+
+      const form = document.querySelector('#configForm');
+      const baseUrlInput = document.querySelector('#baseUrl');
+      const emailInput = document.querySelector('#email');
+      const passwordInput = document.querySelector('#password');
+      const refreshButton = document.querySelector('#refreshButton');
+      const clearButton = document.querySelector('#clearButton');
+      const statusCard = document.querySelector('#statusCard');
+      const statusTitle = document.querySelector('#statusTitle');
+      const statusDetail = document.querySelector('#statusDetail');
+      const metricsGrid = document.querySelector('#metricsGrid');
+
+      let refreshTimer = null;
+
+      restoreConfig();
+      bindEvents();
+      if (hasConfig()) {
+        loadUsage(false);
+      }
+
+      function bindEvents() {
+        form.addEventListener('submit', async (event) => {
+          event.preventDefault();
+          await loadUsage(true);
+        });
+
+        refreshButton.addEventListener('click', async () => {
+          await loadUsage(true);
+        });
+
+        clearButton.addEventListener('click', () => {
+          localStorage.removeItem(STORAGE_KEY);
+          form.reset();
+          clearTimer();
+          metricsGrid.classList.add('hidden');
+          renderStatus('等待查询', '填写站点、账号和密码后点击“保存并查询”。', 'idle');
+        });
+      }
+
+      async function loadUsage(persist) {
+        const env = readEnv();
+        if (!env.BASE_URL || !env.EMAIL || !env.PASSWORD) {
+          renderStatus('配置缺失', '请填写 BASE_URL、EMAIL、PASSWORD。', 'warning');
+          metricsGrid.classList.add('hidden');
+          return;
+        }
+
+        if (persist) {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(env));
+        }
+
+        renderStatus('正在查询', '正在登录并读取今日用量…', 'idle');
+
+        try {
+          const usage = await fetchTodayUsage(env);
+          renderUsage(usage);
+          scheduleRefresh();
+        } catch (error) {
+          clearTimer();
+          const normalized = normalizeError(error);
+          renderStatus(normalized.title, normalized.detail, 'danger');
+          metricsGrid.classList.add('hidden');
+        }
+      }
+
+      async function fetchTodayUsage(env) {
+        const baseUrl = normalizeBaseUrl(env.BASE_URL);
+        const email = trimString(env.EMAIL);
+        const password = trimString(env.PASSWORD);
+
+        if (!baseUrl || !email || !password) {
+          throw new WidgetError('配置缺失', '请填写 BASE_URL、EMAIL、PASSWORD。');
+        }
+
+        const loginResponse = await postJson(`${baseUrl}/api/v1/auth/login`, {
+          email,
+          password,
+        }, '登录失败');
+        const loginPayload = unwrapApiResponse(loginResponse, '登录失败');
+        const accessToken = trimString(loginPayload.access_token);
+
+        if (!accessToken) {
+          if (loginPayload.requires_2fa) {
+            throw new WidgetError('需要 2FA', '当前账号启用了双因素验证，无法自动登录。');
+          }
+          throw new WidgetError('登录失败', '登录响应缺少 access_token');
+        }
+
+        const statsResponse = await getJson(buildStatsUrl(baseUrl, getTimezone()), {
+          Authorization: `Bearer ${accessToken}`,
+        });
+        const stats = unwrapApiResponse(statsResponse, '读取失败');
+
+        return {
+          totalRequests: toFiniteNumber(stats.today_requests),
+          totalTokens: toFiniteNumber(stats.today_tokens),
+          inputTokens: toFiniteNumber(stats.today_input_tokens),
+          outputTokens: toFiniteNumber(stats.today_output_tokens),
+          standardCost: toFiniteNumber(stats.today_cost),
+          totalActualCost: toFiniteNumber(stats.today_actual_cost),
+          averageDurationMs: toFiniteNumber(stats.average_duration_ms),
+        };
+      }
+
+      async function postJson(url, body, fallbackTitle) {
+        const response = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        });
+        return parseJsonResponse(response, fallbackTitle, url);
+      }
+
+      async function getJson(url, headers) {
+        const response = await fetch(url, {
+          method: 'GET',
+          headers,
+        });
+        return parseJsonResponse(response, '请求失败', url);
+      }
+
+      async function parseJsonResponse(response, fallbackTitle, url) {
+        if (!response) {
+          throw new WidgetError(fallbackTitle, '没有收到服务器响应');
+        }
+
+        const status = Number(response.status ?? 200);
+        const route = summarizeUrl(url);
+        const previewSource = cloneResponse(response);
+        let payload;
+
+        try {
+          payload = await response.json();
+        } catch {
+          const preview = await safeResponsePreview(previewSource || response);
+          const statusText = Number.isFinite(status) ? `HTTP ${status}` : 'HTTP 状态未知';
+          throw new WidgetError(fallbackTitle, `${route}${statusText}，非 JSON 响应：${preview}`);
+        }
+
+        if (status < 200 || status >= 300) {
+          throw new WidgetError(fallbackTitle, `${route}${readableMessage(payload) || `HTTP ${status}`}`);
+        }
+
+        return payload;
+      }
+
+      function renderUsage(usage) {
+        metricsGrid.replaceChildren(...METRICS.map((metric) => createMetricCard(metric, usage)));
+        metricsGrid.classList.remove('hidden');
+        renderStatus('查询成功', `上次更新时间：${new Date().toLocaleString('zh-CN')}，页面打开期间会自动刷新。`, 'success');
+      }
+
+      function createMetricCard(metric, usage) {
+        const article = document.createElement('article');
+        article.className = `metric ${metric.tone}`;
+
+        const label = document.createElement('p');
+        label.className = 'metric-label';
+        label.textContent = metric.label;
+
+        const value = document.createElement('p');
+        value.className = 'metric-value';
+        value.textContent = metric.value(usage);
+
+        const subtitle = document.createElement('p');
+        subtitle.className = 'metric-subtitle';
+        subtitle.textContent = metric.subtitle(usage);
+
+        article.append(label, value, subtitle);
+        return article;
+      }
+
+      function renderStatus(title, detail, tone) {
+        statusTitle.textContent = title;
+        statusDetail.textContent = detail;
+        statusCard.dataset.tone = tone;
+      }
+
+      function readEnv() {
+        return {
+          BASE_URL: baseUrlInput.value.trim(),
+          EMAIL: emailInput.value.trim(),
+          PASSWORD: passwordInput.value,
+        };
+      }
+
+      function restoreConfig() {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) return;
+        try {
+          const env = JSON.parse(raw);
+          baseUrlInput.value = typeof env.BASE_URL === 'string' ? env.BASE_URL : '';
+          emailInput.value = typeof env.EMAIL === 'string' ? env.EMAIL : '';
+          passwordInput.value = typeof env.PASSWORD === 'string' ? env.PASSWORD : '';
+        } catch {
+          localStorage.removeItem(STORAGE_KEY);
+        }
+      }
+
+      function hasConfig() {
+        return Boolean(baseUrlInput.value.trim() && emailInput.value.trim() && passwordInput.value);
+      }
+
+      function scheduleRefresh() {
+        clearTimer();
+        refreshTimer = window.setTimeout(() => {
+          loadUsage(false);
+        }, REFRESH_INTERVAL_MS);
+      }
+
+      function clearTimer() {
+        if (refreshTimer) {
+          window.clearTimeout(refreshTimer);
+          refreshTimer = null;
+        }
+      }
+
+      function normalizeError(error) {
+        if (error && typeof error === 'object' && typeof error.title === 'string' && typeof error.detail === 'string') {
+          return error;
+        }
+        if (error instanceof TypeError) {
+          return {
+            title: '网络或跨域错误',
+            detail: '浏览器无法直接请求你的 Sub2API 站点。请确认站点启用了 HTTPS 和 CORS，或者把这个单文件页面部署到与 Sub2API 相同的域名下。',
+          };
+        }
+        return {
+          title: '加载失败',
+          detail: error instanceof Error ? error.message : '请稍后重试。',
+        };
+      }
+
+      function normalizeBaseUrl(value) {
+        let url = trimString(value);
+        if (!url) return '';
+        url = url.replace(/\/+$/, '');
+        url = url.replace(/\/admin\/usage$/i, '');
+        url = url.replace(/\/api\/v1$/i, '');
+        return url.replace(/\/+$/, '');
+      }
+
+      function buildStatsUrl(baseUrl, timezone) {
+        const params = new URLSearchParams({ timezone: timezone || 'Asia/Shanghai' });
+        return `${normalizeBaseUrl(baseUrl)}/api/v1/usage/dashboard/stats?${params.toString()}`;
+      }
+
+      function formatNumber(value, options = {}) {
+        const number = toFiniteNumber(value);
+        if (options.compact === false) {
+          return Math.round(number).toLocaleString('en-US');
+        }
+        const absolute = Math.abs(number);
+        if (absolute >= 1_000_000_000) return `${trimTrailingZeros(number / 1_000_000_000, 2)}B`;
+        if (absolute >= 1_000_000) return `${trimTrailingZeros(number / 1_000_000, 2)}M`;
+        if (absolute >= 1_000) return `${trimTrailingZeros(number / 1_000, 2)}K`;
+        return String(Math.round(number));
+      }
+
+      function formatCost(value) {
+        const number = toFiniteNumber(value);
+        if (number === 0) return '$0.00';
+        if (Math.abs(number) < 1) return `$${trimTrailingZeros(number, 6)}`;
+        return `$${trimTrailingZeros(number, 4)}`;
+      }
+
+      function formatDuration(value) {
+        const ms = toFiniteNumber(value);
+        if (ms >= 1000) return `${trimTrailingZeros(ms / 1000)} s`;
+        return `${Math.round(ms)} ms`;
+      }
+
+      function getTimezone() {
+        try {
+          return Intl.DateTimeFormat().resolvedOptions().timeZone || 'Asia/Shanghai';
+        } catch {
+          return 'Asia/Shanghai';
+        }
+      }
+
+      function cloneResponse(response) {
+        if (!response || typeof response.clone !== 'function') return null;
+        try {
+          return response.clone();
+        } catch {
+          return null;
+        }
+      }
+
+      async function safeResponsePreview(response) {
+        if (typeof response.text !== 'function') return '无响应正文';
+        try {
+          return compactText(await response.text()).slice(0, 120) || '空响应';
+        } catch {
+          return '无法读取响应正文';
+        }
+      }
+
+      function summarizeUrl(url) {
+        if (!url) return '';
+        try {
+          const parsed = new URL(url);
+          return `${parsed.pathname}：`;
+        } catch {
+          return '';
+        }
+      }
+
+      function unwrapApiResponse(payload, fallbackTitle) {
+        if (payload && typeof payload === 'object' && 'code' in payload) {
+          if (payload.code === 0) return payload.data ?? {};
+          throw new WidgetError(fallbackTitle, readableMessage(payload) || `code=${payload.code}`);
+        }
+        return payload ?? {};
+      }
+
+      function toFiniteNumber(value) {
+        const number = Number(value);
+        return Number.isFinite(number) ? number : 0;
+      }
+
+      function trimString(value) {
+        return typeof value === 'string' ? value.trim() : '';
+      }
+
+      function trimTrailingZeros(value, digits = 1) {
+        return Number(value).toFixed(digits).replace(/\.?0+$/, '');
+      }
+
+      function compactText(value) {
+        return String(value ?? '').replace(/\s+/g, ' ').trim();
+      }
+
+      function readableMessage(value) {
+        if (!value) return '';
+        if (value instanceof Error) return value.message;
+        if (typeof value === 'string') return value;
+        if (typeof value.message === 'string') return value.message;
+        if (typeof value.error === 'string') return value.error;
+        if (typeof value.detail === 'string') return value.detail;
+        return '';
+      }
+
+      class WidgetError extends Error {
+        constructor(title, detail) {
+          super(`${title}: ${detail}`);
+          this.name = 'WidgetError';
+          this.title = title;
+          this.detail = detail;
+        }
+      }
+    </script>
+  </body>
+</html>
