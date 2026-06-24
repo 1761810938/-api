@@ -1,5 +1,6 @@
 package cn.setbug.sub2apiusage
 
+import android.app.AlarmManager
 import android.app.PendingIntent
 import android.appwidget.AppWidgetManager
 import android.appwidget.AppWidgetProvider
@@ -7,16 +8,30 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
+import android.os.SystemClock
 import android.widget.RemoteViews
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
 private const val ACTION_REFRESH_WIDGET = "cn.setbug.sub2apiusage.action.REFRESH_WIDGET"
+private const val ACTION_REFRESH_ALL_WIDGETS = "cn.setbug.sub2apiusage.action.REFRESH_ALL_WIDGETS"
+private const val WIDGET_REFRESH_INTERVAL_MS = 15 * 60 * 1000L
 
 class UsageWidgetProvider : AppWidgetProvider() {
+    override fun onEnabled(context: Context) {
+        super.onEnabled(context)
+        schedulePeriodicRefresh(context)
+    }
+
+    override fun onDisabled(context: Context) {
+        super.onDisabled(context)
+        cancelPeriodicRefresh(context)
+    }
+
     override fun onUpdate(context: Context, appWidgetManager: AppWidgetManager, appWidgetIds: IntArray) {
         super.onUpdate(context, appWidgetManager, appWidgetIds)
+        schedulePeriodicRefresh(context)
         appWidgetIds.forEach { appWidgetId ->
             updateWidget(context, appWidgetManager, appWidgetId)
             refreshWidget(context, appWidgetManager, appWidgetId)
@@ -36,16 +51,32 @@ class UsageWidgetProvider : AppWidgetProvider() {
     override fun onDeleted(context: Context, appWidgetIds: IntArray) {
         super.onDeleted(context, appWidgetIds)
         appWidgetIds.forEach { WidgetStore.removeWidget(context, it) }
+        val manager = AppWidgetManager.getInstance(context)
+        val remaining = manager.getAppWidgetIds(ComponentName(context, UsageWidgetProvider::class.java))
+        if (remaining.isEmpty()) {
+            cancelPeriodicRefresh(context)
+        }
     }
 
     override fun onReceive(context: Context, intent: Intent) {
         super.onReceive(context, intent)
-        if (intent.action != ACTION_REFRESH_WIDGET) return
-        val appWidgetId = intent.getIntExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, AppWidgetManager.INVALID_APPWIDGET_ID)
-        if (appWidgetId == AppWidgetManager.INVALID_APPWIDGET_ID) return
         val manager = AppWidgetManager.getInstance(context)
-        updateWidget(context, manager, appWidgetId)
-        refreshWidget(context, manager, appWidgetId)
+        when (intent.action) {
+            ACTION_REFRESH_WIDGET -> {
+                val appWidgetId = intent.getIntExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, AppWidgetManager.INVALID_APPWIDGET_ID)
+                if (appWidgetId == AppWidgetManager.INVALID_APPWIDGET_ID) return
+                updateWidget(context, manager, appWidgetId)
+                refreshWidget(context, manager, appWidgetId)
+            }
+
+            ACTION_REFRESH_ALL_WIDGETS -> {
+                val ids = manager.getAppWidgetIds(ComponentName(context, UsageWidgetProvider::class.java))
+                ids.forEach { appWidgetId ->
+                    updateWidget(context, manager, appWidgetId)
+                    refreshWidget(context, manager, appWidgetId)
+                }
+            }
+        }
     }
 
     companion object {
@@ -105,8 +136,9 @@ class UsageWidgetProvider : AppWidgetProvider() {
                         views.setTextViewText(R.id.widgetMetricValueLeft, snapshot.totalTokens)
                         views.setTextViewText(R.id.widgetMetricLabelRight, "平均耗时")
                         views.setTextViewText(R.id.widgetMetricValueRight, snapshot.averageDurationMs)
-                        views.setTextViewText(R.id.widgetFooter, if (compact) "${snapshot.updatedAtLabel}" else "更新：${snapshot.updatedAtLabel}")
+                        views.setTextViewText(R.id.widgetFooter, if (compact) snapshot.updatedAtLabel else "更新：${snapshot.updatedAtLabel}")
                     }
+
                     !error.isNullOrBlank() -> {
                         views.setTextViewText(R.id.widgetBadge, "ERROR")
                         views.setTextViewText(R.id.widgetPrimary, "查询失败")
@@ -117,6 +149,7 @@ class UsageWidgetProvider : AppWidgetProvider() {
                         views.setTextViewText(R.id.widgetMetricValueRight, "点按重试")
                         views.setTextViewText(R.id.widgetFooter, "点这里打开 App")
                     }
+
                     else -> {
                         views.setTextViewText(R.id.widgetBadge, "READY")
                         views.setTextViewText(R.id.widgetPrimary, "等待查询")
@@ -165,6 +198,33 @@ class UsageWidgetProvider : AppWidgetProvider() {
                         updateWidget(context, appWidgetManager, appWidgetId)
                     }
             }
+        }
+
+        private fun schedulePeriodicRefresh(context: Context) {
+            val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+            alarmManager.setInexactRepeating(
+                AlarmManager.ELAPSED_REALTIME_WAKEUP,
+                SystemClock.elapsedRealtime() + WIDGET_REFRESH_INTERVAL_MS,
+                WIDGET_REFRESH_INTERVAL_MS,
+                periodicRefreshPendingIntent(context),
+            )
+        }
+
+        private fun cancelPeriodicRefresh(context: Context) {
+            val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+            alarmManager.cancel(periodicRefreshPendingIntent(context))
+        }
+
+        private fun periodicRefreshPendingIntent(context: Context): PendingIntent {
+            val intent = Intent(context, UsageWidgetProvider::class.java).apply {
+                action = ACTION_REFRESH_ALL_WIDGETS
+            }
+            return PendingIntent.getBroadcast(
+                context,
+                0,
+                intent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+            )
         }
     }
 }

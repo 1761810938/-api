@@ -73,9 +73,10 @@ fun Sub2ApiUsageApp(viewModel: Sub2ApiViewModel = rememberSub2ApiViewModel()) {
     val context = LocalContext.current.applicationContext
     val snackbarHostState = remember { SnackbarHostState() }
     var editingSiteId by rememberSaveable { mutableStateOf<String?>(null) }
-    var expandedSiteId by rememberSaveable { mutableStateOf<String?>(null) }
+    var expandedSiteIds by rememberSaveable { mutableStateOf(emptyList<String>()) }
     var showEditor by rememberSaveable { mutableStateOf(false) }
     val editingSite = state.sites.firstOrNull { it.id == editingSiteId }
+    val allExpanded = state.sites.isNotEmpty() && expandedSiteIds.size == state.sites.size
 
     LaunchedEffect(state.errorMessage) {
         val message = state.errorMessage ?: return@LaunchedEffect
@@ -87,7 +88,16 @@ fun Sub2ApiUsageApp(viewModel: Sub2ApiViewModel = rememberSub2ApiViewModel()) {
         Scaffold(
             topBar = {
                 CenterAlignedTopAppBar(
-                    title = { Text("Sub2API 用量") }
+                    title = { Text("Sub2API 用量") },
+                    actions = {
+                        if (state.sites.isNotEmpty()) {
+                            TextButton(onClick = {
+                                expandedSiteIds = if (allExpanded) emptyList() else state.sites.map { it.id }
+                            }) {
+                                Text(if (allExpanded) "全部收起" else "全部展开")
+                            }
+                        }
+                    }
                 )
             },
             snackbarHost = { SnackbarHost(snackbarHostState) },
@@ -124,14 +134,18 @@ fun Sub2ApiUsageApp(viewModel: Sub2ApiViewModel = rememberSub2ApiViewModel()) {
                     itemsIndexed(state.sites, key = { _, site -> site.id }) { _, site ->
                         val loading = state.loadingSiteId == site.id
                         val usage = state.usageBySiteId[site.id]
-                        val expanded = expandedSiteId == site.id
+                        val expanded = site.id in expandedSiteIds
                         SiteCard(
                             site = site,
                             usage = usage,
                             loading = loading,
                             expanded = expanded,
                             onToggleExpand = {
-                                expandedSiteId = if (expanded) null else site.id
+                                expandedSiteIds = if (expanded) {
+                                    expandedSiteIds - site.id
+                                } else {
+                                    expandedSiteIds + site.id
+                                }
                             },
                             onRefresh = {
                                 viewModel.refreshSite(site.id)
@@ -142,7 +156,7 @@ fun Sub2ApiUsageApp(viewModel: Sub2ApiViewModel = rememberSub2ApiViewModel()) {
                                 showEditor = true
                             },
                             onDelete = {
-                                if (expandedSiteId == site.id) expandedSiteId = null
+                                expandedSiteIds = expandedSiteIds - site.id
                                 viewModel.deleteSite(site.id)
                                 UsageWidgetProvider.refreshAll(context)
                             }

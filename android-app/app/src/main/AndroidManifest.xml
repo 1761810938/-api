@@ -30,6 +30,7 @@
             android:exported="false">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <action android:name="cn.setbug.sub2apiusage.action.REFRESH_ALL_WIDGETS" />
             </intent-filter>
 
             <meta-data
